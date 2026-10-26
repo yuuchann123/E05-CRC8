@@ -1,46 +1,39 @@
 
-# Tiny Tapeout project information
 project:
-  title: "E05 - Bo tinh CRC-8 noi tiep"
+  title: "E05 - Serial CRC-8"
   author: "yuuchann123"
   discord: ""
-  description: "Bo tinh CRC-8 noi tiep voi da thuc 0x07"
+  description: "Serial CRC-8 calculator using polynomial 0x07"
   language: "Verilog"
   clock_hz: 100000
-
   tiles: "1x1"
-
   top_module: "tt_um_yuuchann123_crc8"
-
   source_files:
     - "project.v"
 
 pinout:
-  # Inputs
-  ui[0]: "DATA_BIT"
-  ui[1]: "DATA_VALID"
-  ui[2]: "DATA_LAST"
-  ui[3]: "START"
+  ui[0]: ""
+  ui[1]: ""
+  ui[2]: ""
+  ui[3]: ""
   ui[4]: ""
   ui[5]: ""
   ui[6]: ""
   ui[7]: ""
 
-  # Outputs
-  uo[0]: "CRC_BIT0"
-  uo[1]: "CRC_BIT1"
-  uo[2]: "CRC_BIT2"
-  uo[3]: "CRC_BIT3"
-  uo[4]: "CRC_BIT4"
-  uo[5]: "CRC_BIT5"
-  uo[6]: "CRC_BIT6"
-  uo[7]: "CRC_BIT7"
+  uo[0]: "CRC_OUT0"
+  uo[1]: "CRC_OUT1"
+  uo[2]: "CRC_OUT2"
+  uo[3]: "CRC_OUT3"
+  uo[4]: "CRC_OUT4"
+  uo[5]: "CRC_OUT5"
+  uo[6]: "CRC_OUT6"
+  uo[7]: "CRC_OUT7"
 
-  # Bidirectional pins
-  uio[0]: "DONE"
-  uio[1]: ""
-  uio[2]: ""
-  uio[3]: ""
+  uio[0]: "DATA_BIT"
+  uio[1]: "DATA_VALID"
+  uio[2]: "CRC_INIT"
+  uio[3]: "CRC_LATCH"
   uio[4]: ""
   uio[5]: ""
   uio[6]: ""
