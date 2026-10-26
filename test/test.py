@@ -1,40 +1,91 @@
-# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
+
 # SPDX-License-Identifier: Apache-2.0
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import RisingEdge, FallingEdge, Timer
+
+
+def crc8_update(crc, bit_in):
+    feedback = ((crc >> 7) & 1) ^ bit_in
+    crc = (crc << 1) & 0xFF
+    if feedback:
+        crc ^= 0x07
+    return crc
+
+
+async def tick(dut):
+    await RisingEdge(dut.clk)
+    await Timer(1, unit="ns")
+
+
+async def send_bit(dut, bit_in):
+    dut.uio_in.value = (1 << 1) | (bit_in & 1)
+    await tick(dut)
 
 
 @cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+async def test_crc8(dut):
+    cocotb.start_soon(Clock(dut.clk, 10, unit="us").start())
 
-    # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 10, unit="us")
-    cocotb.start_soon(clock.start())
-
-    # Reset
-    dut._log.info("Reset")
     dut.ena.value = 1
     dut.ui_in.value = 0
     dut.uio_in.value = 0
     dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
+    await tick(dut)
+    await tick(dut)
     dut.rst_n.value = 1
 
-    dut._log.info("Test project behavior")
+    # Reset CRC accumulator using uio_in[2].
+    dut.uio_in.value = 0b00000100
+    await tick(dut)
+    dut.uio_in.value = 0
 
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
+    assert int(dut.uo_out.value) == 0
 
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
+    # Empty message: latch should preserve CRC = 0.
+    dut.uio_in.value = 0b00001000
+    await tick(dut)
+    assert int(dut.uo_out.value) == 0
+    dut.uio_in.value = 0
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
+    # All-zero byte.
+    crc = 0
+    for _ in range(8):
+        await send_bit(dut, 0)
+        crc = crc8_update(crc, 0)
+    dut.uio_in.value = 0b00001000
+    await tick(dut)
+    assert int(dut.uo_out.value) == crc
+    assert crc == 0
+    dut.uio_in.value = 0
 
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
+    # Reinitialize, then process 0xFF, MSB first.
+    dut.uio_in.value = 0b00000100
+    await tick(dut)
+    dut.uio_in.value = 0
+    crc = 0
+    for bit_in in [1] * 8:
+        await send_bit(dut, bit_in)
+        crc = crc8_update(crc, bit_in)
+    dut.uio_in.value = 0b00001000
+    await tick(dut)
+    assert int(dut.uo_out.value) == crc
+    assert crc == 0xF3
+    dut.uio_in.value = 0
+
+    # Reinitialize, then process ASCII "123456789", MSB first.
+    dut.uio_in.value = 0b00000100
+    await tick(dut)
+    dut.uio_in.value = 0
+    crc = 0
+    for byte in b"123456789":
+        for shift in range(7, -1, -1):
+            bit_in = (byte >> shift) & 1
+            await send_bit(dut, bit_in)
+            crc = crc8_update(crc, bit_in)
+
+    dut.uio_in.value = 0b00001000
+    await tick(dut)
+    assert int(dut.uo_out.value) == 0xF4
+    assert int(dut.uo_out.value) == crc
