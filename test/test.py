@@ -16,7 +16,7 @@ def crc8_update(crc, bit_in):
 
 async def tick(dut):
     await RisingEdge(dut.clk)
-    await Timer(1, unit="ns")
+    await Timer(1, unit="us")
 
 
 async def send_bit(dut, bit_in):
